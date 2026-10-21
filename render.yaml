@@ -1,0 +1,54 @@
+# Deploy su Render: New > Blueprint > collega il repository GitHub di td-finance.
+# L'app usa Docker (LibreOffice per i PDF del modulo): il primo build richiede alcuni minuti.
+services:
+  - type: web
+    name: td-finance
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: BASE_URL
+        value: https://finance.toscanadiagnostica.it   # dominio ufficiale: gli altri host vengono reindirizzati qui
+      - key: DATABASE_URL
+        fromDatabase:
+          name: td-finance-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: SESSION_HOURS
+        value: "10"
+      - key: REQUIRE_TOTP_FOR_ADMINS
+        value: "true"
+      - key: MAX_UPLOAD_MB
+        value: "25"
+      - key: SIGN_ALLOW_LOCAL
+        value: "false"      # la firma richiede sempre la sessione Microsoft 365
+      - key: SEED_ADMIN_EMAIL
+        value: francesco.epifani@toscanadiagnostica.it
+      - key: SEED_ADMIN_NAME
+        value: Francesco Epifani
+      - key: SEED_ADMIN_PASSWORD
+        sync: false   # inserire a mano nel pannello (min 12 caratteri): richiesta al primo accesso, poi da cambiare
+      - key: ENTRA_TENANT_ID
+        sync: false   # gestite nel pannello Render: il Sync del Blueprint non le sovrascrive
+      - key: ENTRA_CLIENT_ID
+        sync: false
+      - key: ENTRA_CLIENT_SECRET
+        sync: false
+      - key: MAIL_MODE
+        value: GRAPH  # invio tramite Microsoft Graph con la stessa app registration (LOG = nessun invio)
+      - key: MAIL_SENDER
+        value: amministrazione@toscanadiagnostica.it
+      - key: MAIL_SENDER_NAME
+        value: Toscana Diagnostica · Amministrazione
+databases:
+  - name: td-finance-db
+    plan: basic-256mb   # istanze, allegati e PDF sono nel database; passare a basic-1gb se gli allegati crescono
+    region: frankfurt
+    databaseName: finance
+    user: finance
