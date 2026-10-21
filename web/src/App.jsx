@@ -28,9 +28,12 @@ function Shell() {
   const inSign = s.data?.counts?.in_signature?.n || 0;
   const mine = s.data?.mine?.length || 0;
   const toExec = s.data?.to_execute?.length || 0;
-  const L = ({ to, icon, children, count, end }) => (
-    <NavLink to={to} end={end}><Icon name={icon} />{children}{count ? <span className="count">{count}</span> : null}</NavLink>
-  );
+  // Le voci sotto /istanze si distinguono per i parametri (?mine=1, ?status=...): l'evidenziazione confronta percorso e parametri
+  const L = ({ to, icon, children, count, end }) => {
+    const [path, query = ''] = to.split('?');
+    const active = loc.pathname === path ? loc.search.replace(/^\?/, '') === query : (!end && loc.pathname.startsWith(`${path}/`) && !query);
+    return <NavLink to={to} className={() => (active ? 'active' : '')}><Icon name={icon} />{children}{count ? <span className="count">{count}</span> : null}</NavLink>;
+  };
   return (
     <div className="shell">
       <aside className={`side ${open ? 'open' : ''}`}>
