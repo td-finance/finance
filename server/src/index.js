@@ -91,7 +91,7 @@ app.use((err, req, res, _next) => {
   if (status >= 500) console.error(`[${req.method} ${req.originalUrl}]`, err);
   if (err.code === '23505') return res.status(409).json({ error: err.constraint === 'users_signer_uq' ? 'Esiste già un utente attivo con questo profilo di firma (CEO o CFO): un solo firmatario per ruolo' : 'Elemento duplicato (email già presente)' });
   if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: `File troppo grande (max ${config.maxUploadMb} MB)` });
-  res.status(status).json({ error: status >= 500 ? 'Errore interno del server' : err.message, code: err.code, details: err.details });
+  res.status(status).json({ error: status === 500 ? `Errore interno del server${req.user?.is_admin ? `: ${err.message}` : ''}` : err.message, code: err.code, details: err.details });
 });
 
 async function start() {

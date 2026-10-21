@@ -141,24 +141,32 @@ export function PromptModal({ title, label, placeholder, confirmText = 'Conferma
   );
 }
 
+// Campo importo: separatore delle migliaia automatico (formato italiano), virgola per i decimali
+const fmtInt = (d) => d.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const fmtMoney = (v) => (v === '' || v == null ? '' : new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(v)));
+const parseMoney = (t) => Number(String(t).replace(/\./g, '').replace(',', '.'));
 export function MoneyInput({ value, onChange, disabled, ...rest }) {
-  // mostra il valore in formato italiano, accetta virgola o punto
-  const [txt, setTxt] = useState(value == null || value === '' ? '' : String(value).replace('.', ','));
+  const [txt, setTxt] = useState(fmtMoney(value));
   useEffect(() => {
-    const cur = Number(String(txt).replace(/\./g, '').replace(',', '.'));
-    if (value !== '' && value != null && Number(value) !== cur) setTxt(String(value).replace('.', ','));
+    const cur = parseMoney(txt);
+    if (value !== '' && value != null && Number(value) !== cur) setTxt(fmtMoney(value));
     if ((value === '' || value == null) && txt !== '') setTxt('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
   return (
     <input className="money" inputMode="decimal" disabled={disabled} value={txt} {...rest}
       onChange={(e) => {
-        const t = e.target.value.replace(/[^\d.,-]/g, '');
+        // accetta solo cifre e una virgola; il punto battuto viene letto come virgola dei decimali
+        let raw = e.target.value.replace(/\./g, (m, i, str) => (str.indexOf(',') === -1 && i === str.length - 1 ? ',' : '')).replace(/[^\d,]/g, '');
+        const [intPart, ...decParts] = raw.split(',');
+        const dec = decParts.length ? ',' + decParts.join('').slice(0, 2) : '';
+        const t = fmtInt(intPart) + dec;
         setTxt(t);
-        if (t === '') return onChange('');
-        const n = Number(t.replace(/\./g, '').replace(',', '.'));
+        if (t === '' || t === ',') return onChange('');
+        const n = parseMoney(t);
         if (Number.isFinite(n)) onChange(Math.round(n * 100) / 100);
-      }} />
+      }}
+      onBlur={() => { if (txt !== '' && Number.isFinite(parseMoney(txt))) setTxt(fmtMoney(parseMoney(txt))); }} />
   );
 }
 

@@ -57,7 +57,7 @@ export default function RequestDetail() {
   if (!r) return <div className="page"><Loading /></div>;
   const manager = canManage(user);
   const closed = ['ESEGUITA', 'ANNULLATA'].includes(r.status);
-  const act = async (fn, msg) => { setErr(null); try { const out = await fn(); if (out?.links && Object.keys(out.links).length) setLinks(out.links); toast(msg); req.reload(); } catch (e) { setErr(e); throw e; } };
+  const act = async (fn, msg) => { setErr(null); try { const out = await fn(); if (out?.links && Object.keys(out.links).length) setLinks(out.links); toast(msg); req.reload(); } catch (e) { setErr(e); req.reload(); throw e; } };
   const upload = async (files) => {
     if (!files?.length) return;
     const fd = new FormData(); for (const f of files) fd.append('files', f);

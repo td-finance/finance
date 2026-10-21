@@ -174,6 +174,9 @@ r.post('/:id/submit', requireManage, ah(async (req, res) => {
   if (!['BOZZA', 'RIFIUTATA'].includes(x.status)) throw bad('L\'istanza è già stata inviata in firma');
   const errs = submitErrors(x);
   if (errs.length) throw bad('Istanza incompleta', errs);
+  const sg = await signers();
+  const missingUsers = (x.tier === 'SINGOLA' ? [x.single_signer] : ['CEO', 'CFO']).filter((role) => !sg[role]);
+  if (missingUsers.length) throw bad(`Nessun utente attivo con profilo ${missingUsers.join(' e ')}: censirlo in Utenti (con l'email Microsoft 365) prima di inviare in firma.`);
   if (x.status === 'RIFIUTATA') { await q('UPDATE payment_requests SET version=version+1 WHERE id=$1', [x.id]); x.version += 1; }
   // la conferma dell'IBAN dichiarata nell'istanza viene registrata nell'anagrafica del beneficiario
   if (x.new_iban && x.iban_verified_note && x.beneficiary_id) {

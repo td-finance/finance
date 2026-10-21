@@ -2,7 +2,7 @@
 import crypto from 'node:crypto';
 import { one, many, q, tx } from '../db.js';
 import { config } from '../config.js';
-import { itDate, itDateTime } from './util.js';
+import { itDate, itDateTime, HttpError } from './util.js';
 import { getSettings, requiredSigners, contentHash, eur, TIER_LABEL } from './rules.js';
 import { sendMail, layout } from './mail.js';
 import { formData, renderDocx, docxToPdf, pdfAvailable, ROLE_LABEL } from './docgen.js';
@@ -115,10 +115,18 @@ export async function submit(r, userId, { resubmit = false } = {}) {
   r.aggregation = agg;
   await addEvent(r.id, resubmit ? 'RIINVIATA' : 'INVIATA', userId, `Inviata in firma (${TIER_LABEL[r.tier]})`, { protocol: r.protocol, version: r.version, aggregation_warning: agg.warning });
   const links = {};
+  const failed = [];
   for (const role of requiredSigners(r)) {
-    const res = await issueToken(r, role);
-    if (res.url) links[role] = res.url;
+    try {
+      const res = await issueToken(r, role);
+      if (res.url) links[role] = res.url;
+    } catch (e) {
+      failed.push(`${role}: ${e.message}`);
+      await addEvent(r.id, 'ERRORE_MAIL', userId, `Email al ${role} non inviata: ${e.message}`);
+      console.error('[mail]', e.message);
+    }
   }
+  if (failed.length) throw new HttpError(502, `Istanza protocollata (${r.protocol}) e in firma, ma l'email non è partita. ${failed.join('; ')}. Controlla Impostazioni > Invio email, poi usa "Reinvia link".`);
   return { protocol: r.protocol, links, aggregation: agg };
 }
 
@@ -126,8 +134,13 @@ export async function submit(r, userId, { resubmit = false } = {}) {
 export async function resend(r, { reminder = false } = {}) {
   const links = {};
   for (const role of r.missing_signers) {
-    const res = await issueToken(r, role, { reminder });
-    if (res.url) links[role] = res.url;
+    try {
+      const res = await issueToken(r, role, { reminder });
+      if (res.url) links[role] = res.url;
+    } catch (e) {
+      await addEvent(r.id, 'ERRORE_MAIL', null, `Email al ${role} non inviata: ${e.message}`);
+      throw new HttpError(502, `Email al ${role} non inviata: ${e.message}`);
+    }
   }
   return links;
 }
