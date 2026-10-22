@@ -3,7 +3,7 @@ const env = process.env;
 
 export const config = {
   port: Number(env.PORT || 3000),
-  baseUrl: env.BASE_URL || 'http://localhost:3000',
+  baseUrl: (env.BASE_URL || 'http://localhost:3000').trim().replace(/\/+$/, ''),   // senza barra finale: compone redirect URI e link di firma
   databaseUrl: env.DATABASE_URL || 'postgres://postgres:dev@localhost:5432/finance',
   sessionSecret: env.SESSION_SECRET || 'dev-only-change-me',
   secureCookies: env.NODE_ENV === 'production',
